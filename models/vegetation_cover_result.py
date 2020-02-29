@@ -3,9 +3,9 @@ from osgeo import gdal, ogr, osr
 
 class VegetationCoverResult(Resource):
     def get(self):
-        return {"filename": "name",
+        return {"filename": self.getFileName(),
                 "cover": "coverage",
-                "area": "areaRange",
+                "area": self.calculateArea(),
                 "centroid" : self.calculateCentroidCoordinates(),
                 "local_time": "time"}
 
@@ -37,8 +37,14 @@ class VegetationCoverResult(Resource):
             fileData = fileData
         )
 
+    def getFileName(self):
+        geotransform = self.getGeotransform()
+        return geotransform["fileData"].GetDescription()
+
     def calculateArea(self):
-        return {}
+        geotransform = self.getGeotransform()
+        area = geotransform["xSize"] * geotransform["xres"] * geotransform["ySize"] * (-geotransform["yres"])
+        return area/10**6
 
     
     def calculateCentroidCoordinates(self):
