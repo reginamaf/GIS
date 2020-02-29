@@ -1,0 +1,49 @@
+swagger: '2.0'
+
+info:
+  version: "1.0.0"
+  title: Desafio Strider GIS
+
+paths:
+  /vegetation-cover:
+    get:
+      description: |
+        Calculates vegetation cover and some geographical information for a 
+        given file in the server (preexisting).
+      responses:
+        200:
+          description: Successful response
+          schema:
+            $ref: "#/definitions/vcr"
+                  
+definitions:
+  vcr:
+    title: Vegetation Cover Result
+    type: object
+    properties:
+      filename:
+        type: string
+        description: |
+          The filename of the scene file used (for reference).
+      cover:
+        type: number
+        format: float
+        description: |
+          The vegetation cover for the given scene (0.0 to 1.0).
+      area:
+        type: number
+        format: float
+        description: |
+          Area of the inspected site in square kilometers.
+      centroid:
+        type: object
+        format: GeoJSON (RFC 7946)
+        description: |
+          GeoJSON (as of RFC 7946) Point Geometry object for the centroid of 
+          the inspected site. Note that the GeoJSON RFC spec mandates that 
+          coordinates be in lon,lat order and in the WGS84 (EPSG:4326)
+          CRS (Coordinate Reference System).
+      local_time:
+        type: string
+        description: |
+          Timestamp of the capture in local time, in ISO 8601 format.
