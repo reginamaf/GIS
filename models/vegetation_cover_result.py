@@ -4,10 +4,10 @@ from osgeo import gdal, ogr, osr
 class VegetationCoverResult(Resource):
     def get(self):
         return {"filename": self.getFileName(),
-                "cover": "coverage",
+                "cover": self.calculateVegetationCoverage(),
                 "area": self.calculateArea(),
                 "centroid" : self.calculateCentroidCoordinates(),
-                "local_time": "time"}
+                "local_time": self.getLocalTime()}
 
     def getGeotransform(self):
         fileData = gdal.Open('./models/analytic.tif', gdal.GA_ReadOnly)
@@ -48,26 +48,39 @@ class VegetationCoverResult(Resource):
 
     
     def calculateCentroidCoordinates(self):
-            geotransform = self.getGeotransform()
-            ulx = geotransform["ulx"]
-            uly = geotransform["uly"]
-            xres = geotransform["xres"]
-            yres = geotransform["yres"]
-            lrx = ulx + (geotransform["xSize"] * xres)
-            lry = uly + (geotransform["ySize"] * yres)
-            # Calculate coordinates of centroid
-            cx = (lrx - ulx)/2 + ulx
-            cy = (lry - uly)/2 + uly
-            # Transform coordinates of centroid
-            source = osr.SpatialReference()
-            source.ImportFromWkt(geotransform["fileData"].GetProjection())
-            target = osr.SpatialReference()
-            target.ImportFromEPSG(4326)
-            transform = osr.CoordinateTransformation(source, target)
-            transform.TransformPoint(cx, cy)
-            return {
-                "x": cx,
-                "y": cy
-            }
+        geotransform = self.getGeotransform()
+        ulx = geotransform["ulx"]
+        uly = geotransform["uly"]
+        xres = geotransform["xres"]
+        yres = geotransform["yres"]
+        lrx = ulx + (geotransform["xSize"] * xres)
+        lry = uly + (geotransform["ySize"] * yres)
+        # Calculate coordinates of centroid
+        cx = (lrx - ulx)/2 + ulx
+        cy = (lry - uly)/2 + uly
+        # Transform coordinates of centroid
+        source = osr.SpatialReference()
+        source.ImportFromWkt(geotransform["fileData"].GetProjection())
+        target = osr.SpatialReference()
+        target.ImportFromEPSG(4326)
+        transform = osr.CoordinateTransformation(source, target)
+        transform.TransformPoint(cx, cy)
+        return {
+            "x": cx,
+            "y": cy
+        }
+    
+    def calculateVegetationCoverage(self):
+        geotransform = self.getGeotransform()
+        totalPixels = geotransform["xSize"] * geotransform["ySize"]
+        fileData = geotransform["fileData"]
+        greenBand = fileData.GetRasterBand(2)
+        bandPixels = greenBand.XSize * greenBand.YSize
+        print(bandPixels)
+        print(totalPixels)
+        return bandPixels*100/totalPixels
 
-
+    def getLocalTime(self):
+        geotransform = self.getGeotransform();
+        time = geotransform["fileData"].GetMetadataItem("TIFFTAG_DATETIME")
+        return time
