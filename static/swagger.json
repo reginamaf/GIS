@@ -24,7 +24,7 @@
           "tags": [
             "Vegetation Cover Request"
           ],
-          "summary": "Returns Vegetarion coverage calculations",
+          "summary": "Returns Vegetation coverage calculations",
           "responses": {
             "200": {
               "description": "OK",
@@ -33,7 +33,7 @@
               }
             },
             "400": {
-              "description": "Could'nt execute coverage calculations."
+              "description": "Couldn't execute coverage calculations."
             }
           }
         }
