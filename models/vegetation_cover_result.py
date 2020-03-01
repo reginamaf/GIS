@@ -1,13 +1,20 @@
 from flask_restful import Resource
 from osgeo import gdal, ogr, osr
+import numpy as np
+import ntpath
 
 class VegetationCoverResult(Resource):
     def get(self):
-        return {"filename": self.getFileName(),
-                "cover": self.calculateVegetationCoverage(),
-                "area": self.calculateArea(),
-                "centroid" : self.calculateCentroidCoordinates(),
-                "local_time": self.getLocalTime()}
+        try:
+            data = {"filename": self.getFileName(),
+                    "cover": self.calculateVegetationCoverage(),
+                    "area": self.calculateArea(),
+                    "centroid" : self.calculateCentroidCoordinates(),
+                    "local_time": self.getLocalTime()}
+            return data, 200
+
+        except:
+            return "Could'nt execute coverage calculations.", 400
 
     def getGeotransform(self):
         fileData = gdal.Open('./models/analytic.tif', gdal.GA_ReadOnly)
@@ -39,7 +46,8 @@ class VegetationCoverResult(Resource):
 
     def getFileName(self):
         geotransform = self.getGeotransform()
-        return geotransform["fileData"].GetDescription()
+        path = geotransform["fileData"].GetDescription()
+        return ntpath.basename(path)
 
     def calculateArea(self):
         geotransform = self.getGeotransform()
@@ -72,15 +80,24 @@ class VegetationCoverResult(Resource):
     
     def calculateVegetationCoverage(self):
         geotransform = self.getGeotransform()
-        totalPixels = geotransform["xSize"] * geotransform["ySize"]
         fileData = geotransform["fileData"]
-        greenBand = fileData.GetRasterBand(2)
-        bandPixels = greenBand.XSize * greenBand.YSize
-        print(bandPixels)
-        print(totalPixels)
-        return bandPixels*100/totalPixels
+        redBand = fileData.GetRasterBand(3)
+        nirBand = fileData.GetRasterBand(4)
+        red = redBand.ReadAsArray().astype(np.float)
+        nir = nirBand.ReadAsArray().astype(np.float)
+        np.seterr(divide='ignore', invalid='ignore')
+        check = np.logical_or ( red > 0, nir > 0 )
+        ndvi = np.where (check,  (nir - red ) / ( nir + red ), -999)
+        totalSize = ndvi.size
+        # NDVI bigger than zero represents vegetation
+        biggerThanZero = np.count_nonzero(ndvi > 0)
+        vCover = biggerThanZero*100/totalSize
+        return vCover
 
     def getLocalTime(self):
-        geotransform = self.getGeotransform();
+        geotransform = self.getGeotransform()
         time = geotransform["fileData"].GetMetadataItem("TIFFTAG_DATETIME")
-        return time
+        if time is None:
+            return "No Date and Time information found in file" 
+        else:
+            return time
